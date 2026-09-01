@@ -1,0 +1,14 @@
+# Node dependencies & build artifacts
+node_modules
+dist
+dist-windows
+
+# Rust / Tauri target directory
+src-tauri/target
+src-tauri/gen
+
+# OS and IDE files
+.DS_Store
+*.log
+.vscode/
+.idea/
