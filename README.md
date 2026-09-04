@@ -10,12 +10,12 @@
 Bạn có thể tải các file thành phẩm từ mục **Releases** trên GitHub:
 - **Linux Debian / Ubuntu (`.deb`)**:
   ```bash
-  sudo dpkg -i Erwining_0.1.0_amd64.deb
+  sudo dpkg -i Erwining_2.0.0_amd64.deb
   ```
 - **Linux Chạy trực tiếp (`.AppImage`)**:
   ```bash
-  chmod +x Erwining_0.1.0_amd64.AppImage
-  ./Erwining_0.1.0_amd64.AppImage
+  chmod +x Erwining_2.0.0_amd64.AppImage
+  ./Erwining_2.0.0_amd64.AppImage
   ```
 - **Windows (`.exe` / `.msi`)**:
   Tải file về và nhấp đúp để cài đặt hoặc mở ứng dụng.
