@@ -119,5 +119,29 @@ export const api = {
       target.updated_at = new Date().toISOString();
       localStorage.setItem(LOCAL_STORAGE_KEY_PROJECTS, JSON.stringify(projects));
     }
+  },
+
+  // Schedule CRUD
+  async getSchedule(key: string): Promise<string> {
+    if (isTauri) {
+      return await invoke<string>('get_schedule', { key });
+    }
+    return localStorage.getItem(`erwining_schedule_${key}`) || '{}';
+  },
+
+  async saveSchedule(key: string, content: string): Promise<void> {
+    if (isTauri) {
+      await invoke('save_schedule', { key, content });
+      return;
+    }
+    localStorage.setItem(`erwining_schedule_${key}`, content);
+  },
+
+  async deleteSchedule(key: string): Promise<void> {
+    if (isTauri) {
+      await invoke('delete_schedule', { key });
+      return;
+    }
+    localStorage.removeItem(`erwining_schedule_${key}`);
   }
 };

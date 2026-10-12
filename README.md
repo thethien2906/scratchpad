@@ -10,17 +10,17 @@ A lightweight, distraction-free desktop note-taking and project management appli
 You can download the compiled assets directly from the [GitHub Releases](https://github.com/thethien2906/scratchpad/releases) page:
 
 - **Windows (`.exe` / `.msi`)**:
-  - `Erwining_2.0.0_x64-setup.exe` (NSIS Installer)
+  - `Erwining_2.1.0_x64-setup.exe` (NSIS Installer)
   - `erwining.exe` (Standalone Portable Executable)
-  - `Erwining_2.0.0_x64_en-US.msi` (MSI Package)
+  - `Erwining_2.1.0_x64_en-US.msi` (MSI Package)
 - **Linux Debian / Ubuntu (`.deb`)**:
   ```bash
-  sudo dpkg -i Erwining_2.0.0_amd64.deb
+  sudo dpkg -i Erwining_2.1.0_amd64.deb
   ```
 - **Linux Portable (`.AppImage`)**:
   ```bash
-  chmod +x Erwining_2.0.0_amd64.AppImage
-  ./Erwining_2.0.0_amd64.AppImage
+  chmod +x Erwining_2.1.0_amd64.AppImage
+  ./Erwining_2.1.0_amd64.AppImage
   ```
 
 ---
@@ -72,3 +72,4 @@ You can download the compiled assets directly from the [GitHub Releases](https:/
 - **`Enter` (in project creation input)**: Create and immediately navigate to the new project.
 - **`Escape`**: Cancel project creation or renaming.
 - **`Click on Project Title`**: Edit project name directly in the editor heading.
+- **`Schedule Mode`**: 1-hour window timetable from Monday to Sunday with auto-saving, color tags, and recurring weekly routines.

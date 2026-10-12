@@ -6,7 +6,9 @@ import {
   Trash2, 
   Edit2, 
   Check, 
-  X 
+  X,
+  Calendar,
+  PenLine
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -14,6 +16,7 @@ interface SidebarProps {
   projects: ProjectSummary[];
   loading: boolean;
   onSelectGeneral: () => void;
+  onSelectSchedule: () => void;
   onSelectProject: (id: number) => void;
   onCreateProject: (name: string) => Promise<void>;
   onRenameProject: (id: number, name: string) => Promise<void>;
@@ -25,6 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   projects,
   loading,
   onSelectGeneral,
+  onSelectSchedule,
   onSelectProject,
   onCreateProject,
   onRenameProject,
@@ -107,17 +111,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Main Navigation */}
       <div className="flex-1 overflow-y-auto p-3 space-y-6">
-        {/* Section: Creative Mode */}
-        <div>
+        {/* Section: Modes (Creative Mode & Schedule Mode) */}
+        <div className="space-y-1">
           <button
             onClick={onSelectGeneral}
-            className={`w-full flex items-center px-3 py-2 rounded-md text-sm transition-colors duration-150 text-left ${
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors duration-150 text-left ${
               activeView.type === 'general'
                 ? 'bg-dark-active text-text-primary font-medium'
                 : 'text-text-secondary hover:bg-dark-hover'
             }`}
           >
+            <PenLine className="w-4 h-4 stroke-[1.75] flex-shrink-0 text-text-muted" />
             <span className="truncate">Creative Mode</span>
+          </button>
+
+          <button
+            onClick={onSelectSchedule}
+            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors duration-150 text-left ${
+              activeView.type === 'schedule'
+                ? 'bg-dark-active text-text-primary font-medium'
+                : 'text-text-secondary hover:bg-dark-hover'
+            }`}
+          >
+            <Calendar className="w-4 h-4 stroke-[1.75] flex-shrink-0 text-text-muted" />
+            <span className="truncate">Schedule Mode</span>
           </button>
         </div>
 

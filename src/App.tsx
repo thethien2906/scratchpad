@@ -5,6 +5,7 @@ import { useProjects } from './hooks/useProjects';
 import { useAutoSave } from './hooks/useAutoSave';
 import { Sidebar } from './components/Sidebar';
 import { Editor } from './components/Editor';
+import { ScheduleView } from './components/ScheduleView';
 
 export default function App() {
   const {
@@ -15,7 +16,12 @@ export default function App() {
     deleteProject,
   } = useProjects();
 
-  const [activeView, setActiveView] = useState<ActiveView>({ type: 'general' });
+  const [activeView, setActiveView] = useState<ActiveView>(() => {
+    if (typeof window !== 'undefined' && window.location.hash.startsWith('#schedule')) {
+      return { type: 'schedule' };
+    }
+    return { type: 'general' };
+  });
   const [content, setContent] = useState<string>('');
   const [isLoadingContent, setIsLoadingContent] = useState<boolean>(true);
 
@@ -28,7 +34,7 @@ export default function App() {
     const current = activeViewRef.current;
     if (current.type === 'general') {
       await api.saveGeneralScratchpad(val);
-    } else {
+    } else if (current.type === 'project') {
       await api.saveProjectContent(current.projectId, val);
     }
   }, []);
@@ -42,13 +48,17 @@ export default function App() {
   // Load content whenever activeView changes
   const loadContentForView = useCallback(
     async (view: ActiveView) => {
+      if (view.type === 'schedule') {
+        setIsLoadingContent(false);
+        return;
+      }
       setIsLoadingContent(true);
       try {
         if (view.type === 'general') {
           const text = await api.getGeneralScratchpad();
           setContent(text);
           resetSavedContent(text);
-        } else {
+        } else if (view.type === 'project') {
           const text = await api.getProjectContent(view.projectId);
           setContent(text);
           resetSavedContent(text);
@@ -72,6 +82,14 @@ export default function App() {
     if (activeView.type === 'general') return;
     await flush();
     setActiveView({ type: 'general' });
+    if (typeof window !== 'undefined') window.location.hash = '';
+  };
+
+  const handleSelectSchedule = async () => {
+    if (activeView.type === 'schedule') return;
+    await flush();
+    setActiveView({ type: 'schedule' });
+    if (typeof window !== 'undefined') window.location.hash = 'schedule';
   };
 
   const handleSelectProject = async (id: number) => {
@@ -111,17 +129,20 @@ export default function App() {
         projects={projects}
         loading={loadingProjects}
         onSelectGeneral={handleSelectGeneral}
+        onSelectSchedule={handleSelectSchedule}
         onSelectProject={handleSelectProject}
         onCreateProject={handleCreateProject}
         onRenameProject={handleRenameProject}
         onDeleteProject={handleDeleteProject}
       />
 
-      {/* Main Editor */}
+      {/* Main View */}
       {isLoadingContent ? (
         <div className="flex-1 flex items-center justify-center text-text-faint text-sm">
           Loading...
         </div>
+      ) : activeView.type === 'schedule' ? (
+        <ScheduleView />
       ) : activeView.type === 'general' ? (
         <Editor
           title="Creative Mode"

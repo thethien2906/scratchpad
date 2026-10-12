@@ -21,6 +21,9 @@ pub fn run() {
             commands::get_project,
             commands::get_project_content,
             commands::save_project_content,
+            commands::get_schedule,
+            commands::save_schedule,
+            commands::delete_schedule,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -87,6 +87,16 @@ impl Database {
             [],
         )?;
 
+        // 3. Schedules table
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS schedules (
+                key TEXT PRIMARY KEY,
+                content TEXT NOT NULL DEFAULT '{}',
+                updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+            );",
+            [],
+        )?;
+
         Ok(())
     }
 
@@ -263,6 +273,44 @@ impl Database {
 
         Ok(())
     }
+
+    // --- Schedule Methods ---
+
+    pub fn get_schedule(&self, key: &str) -> Result<String, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn
+            .prepare("SELECT content FROM schedules WHERE key = ?1;")
+            .map_err(|e| e.to_string())?;
+
+        let content: String = stmt
+            .query_row(params![key], |row| row.get(0))
+            .unwrap_or_else(|_| "{}".to_string());
+
+        Ok(content)
+    }
+
+    pub fn save_schedule(&self, key: &str, content: &str) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO schedules (key, content, updated_at) 
+             VALUES (?1, ?2, datetime('now', 'localtime'))
+             ON CONFLICT(key) DO UPDATE SET 
+                content = excluded.content,
+                updated_at = datetime('now', 'localtime');",
+            params![key, content],
+        )
+        .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    pub fn delete_schedule(&self, key: &str) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM schedules WHERE key = ?1;", params![key])
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -317,5 +365,24 @@ mod tests {
         db.delete_project(proj.id).unwrap();
         let list_after = db.list_projects().unwrap();
         assert_eq!(list_after.len(), 0);
+    }
+
+    #[test]
+    fn test_schedule_crud() {
+        let db = Database::new_in_memory().unwrap();
+
+        // Initial state should be empty json object
+        let initial = db.get_schedule("2026-10-12").unwrap();
+        assert_eq!(initial, "{}");
+
+        // Save schedule
+        db.save_schedule("2026-10-12", r#"{"0-17":{"text":"Gym at 17:00"}}"#).unwrap();
+        let updated = db.get_schedule("2026-10-12").unwrap();
+        assert_eq!(updated, r#"{"0-17":{"text":"Gym at 17:00"}}"#);
+
+        // Delete schedule
+        db.delete_schedule("2026-10-12").unwrap();
+        let after_delete = db.get_schedule("2026-10-12").unwrap();
+        assert_eq!(after_delete, "{}");
     }
 }

@@ -54,3 +54,20 @@ pub fn get_project_content(state: State<'_, AppState>, id: i64) -> Result<String
 pub fn save_project_content(state: State<'_, AppState>, id: i64, content: String) -> Result<(), String> {
     state.db.save_project_content(id, &content)
 }
+
+// --- Schedule Commands ---
+
+#[tauri::command]
+pub fn get_schedule(state: State<'_, AppState>, key: String) -> Result<String, String> {
+    state.db.get_schedule(&key)
+}
+
+#[tauri::command]
+pub fn save_schedule(state: State<'_, AppState>, key: String, content: String) -> Result<(), String> {
+    state.db.save_schedule(&key, &content)
+}
+
+#[tauri::command]
+pub fn delete_schedule(state: State<'_, AppState>, key: String) -> Result<(), String> {
+    state.db.delete_schedule(&key)
+}
