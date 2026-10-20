@@ -1,0 +1,9 @@
+services:
+  erwining:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: erwining-web
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:80"
