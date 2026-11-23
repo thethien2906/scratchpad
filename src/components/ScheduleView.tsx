@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { forwardRef, useImperativeHandle, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -118,7 +118,11 @@ interface EditingCellInfo {
   existingCell?: ScheduleCell;
 }
 
-export const ScheduleView: React.FC = () => {
+export interface ScheduleViewHandle {
+  flush: () => Promise<void>;
+}
+
+export const ScheduleView = forwardRef<ScheduleViewHandle>((_props, ref) => {
   // Mode: weekly recurring routine (default) vs specific week
   const [isRoutineMode, setIsRoutineMode] = useState<boolean>(true);
   const [currentMonday, setCurrentMonday] = useState<Date>(() => getMonday(new Date()));
@@ -200,17 +204,42 @@ export const ScheduleView: React.FC = () => {
   // Save changes with debounce
   const isInitialMount = useRef(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSaveRef = useRef<{ data: ScheduleData; key: string } | null>(null);
 
   const saveToBackend = useCallback(async (data: ScheduleData, key: string) => {
     setSaveStatus('saving');
     try {
       await api.saveSchedule(key, JSON.stringify(data));
       setSaveStatus('saved');
+      if (pendingSaveRef.current?.data === data && pendingSaveRef.current.key === key) {
+        pendingSaveRef.current = null;
+      }
     } catch (err) {
       console.error('Failed to save schedule:', err);
       setSaveStatus('error');
     }
   }, []);
+
+  const flushPendingSave = useCallback(async () => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    const pending = pendingSaveRef.current;
+    if (!pending) return;
+
+    setSaveStatus('saving');
+    try {
+      await api.saveSchedule(pending.key, JSON.stringify(pending.data));
+      if (pendingSaveRef.current === pending) pendingSaveRef.current = null;
+      setSaveStatus('saved');
+    } catch (error) {
+      setSaveStatus('error');
+      throw error;
+    }
+  }, []);
+
+  useImperativeHandle(ref, () => ({ flush: flushPendingSave }), [flushPendingSave]);
 
   const updateScheduleData = useCallback((newData: ScheduleData) => {
     setScheduleData(newData);
@@ -220,7 +249,9 @@ export const ScheduleView: React.FC = () => {
       clearTimeout(saveTimeoutRef.current);
     }
 
+    pendingSaveRef.current = { data: newData, key: activeKey };
     saveTimeoutRef.current = setTimeout(() => {
+      saveTimeoutRef.current = null;
       saveToBackend(newData, activeKey);
     }, 400);
   }, [activeKey, saveToBackend]);
@@ -948,4 +979,4 @@ export const ScheduleView: React.FC = () => {
       )}
     </main>
   );
-};
+});

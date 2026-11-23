@@ -6,4 +6,14 @@ services:
     container_name: erwining-web
     restart: unless-stopped
     ports:
-      - "${PORT:-8080}:80"
+      - "${BIND_HOST:-127.0.0.1}:${PORT:-8080}:${PORT:-8080}"
+    user: "${APP_UID:-1000}:${APP_GID:-1000}"
+    environment:
+      PORT: "${PORT:-8080}"
+      DATABASE_PATH: "${DATABASE_PATH:-/app/data/erwining.db}"
+      STATIC_DIR: /app/dist
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+      SESSION_TTL_DAYS: "${SESSION_TTL_DAYS:-30}"
+      ADMIN_SECRET: "${ADMIN_SECRET:-create_profile}"
+    volumes:
+      - ./data:/app/data

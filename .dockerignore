@@ -3,6 +3,9 @@ dist
 dist-windows
 src-tauri/target
 src-tauri/gen
+server/target
+data
+.env
 .git
 .github
 .vscode

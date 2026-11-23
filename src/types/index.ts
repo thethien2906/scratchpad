@@ -12,6 +12,18 @@ export interface ProjectSummary {
   updated_at: string;
 }
 
+export interface ProfileSummary {
+  id: number;
+  name: string;
+  avatar_color: string;
+}
+
+export interface ApiError extends Error {
+  status: number;
+  code?: string;
+  retryAfterSeconds?: number;
+}
+
 export type SaveStatusState = 'saved' | 'saving' | 'unsaved' | 'error';
 
 export type ActiveView = 

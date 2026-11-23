@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ActiveView, ProjectSummary } from '../types';
+import { ActiveView, ProfileSummary, ProjectSummary } from '../types';
 import { 
   Folder, 
   Plus, 
@@ -8,7 +8,8 @@ import {
   Check, 
   X,
   Calendar,
-  PenLine
+  PenLine,
+  LogOut,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -21,6 +22,8 @@ interface SidebarProps {
   onCreateProject: (name: string) => Promise<void>;
   onRenameProject: (id: number, name: string) => Promise<void>;
   onDeleteProject: (id: number) => Promise<void>;
+  currentProfile?: ProfileSummary | null;
+  onSwitchProfile?: () => Promise<void>;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -33,6 +36,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCreateProject,
   onRenameProject,
   onDeleteProject,
+  currentProfile,
+  onSwitchProfile,
 }) => {
   const [newProjectName, setNewProjectName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -303,6 +308,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
       </div>
+
+      {currentProfile && (
+        <footer className="flex items-center gap-3 border-t border-dark-border px-4 py-3">
+          <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
+            style={{ backgroundColor: currentProfile.avatar_color }}
+          >
+            {(currentProfile.name.trim()[0] || '?').toLocaleUpperCase()}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-xs text-text-secondary" title={currentProfile.name}>
+            {currentProfile.name}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              if (onSwitchProfile) void onSwitchProfile().catch((error) => console.error('Failed to lock profile:', error));
+            }}
+            title="Switch / Lock profile"
+            aria-label="Switch or lock profile"
+            className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-dark-hover hover:text-text-primary"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </footer>
+      )}
     </aside>
   );
 };

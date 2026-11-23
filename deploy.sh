@@ -17,9 +17,17 @@ if [ -d .git ]; then
   git pull --rebase || echo "Warning: git pull failed or dirty working tree. Continuing with local files."
 fi
 
+# Keep the SQLite directory on the host so it survives image rebuilds.
+mkdir -p data
+
+if [ ! -w data ]; then
+  echo >&2 "Error: ./data is not writable by the current user. Fix its ownership before deploying."
+  exit 1
+fi
+
 # Deploy with docker compose
 echo "--> Building and starting container..."
-docker compose up -d --build --remove-orphans
+APP_UID="$(id -u)" APP_GID="$(id -g)" docker compose up -d --build --remove-orphans
 
 # Clean up dangling images to save VPS disk space
 echo "--> Cleaning up unused images..."
@@ -29,6 +37,6 @@ docker image prune -f
 echo "--> Container status:"
 docker compose ps
 
-PORT="${PORT:-8080}"
 echo "=== Deployment finished successfully! ==="
-echo "App is accessible at: http://<YOUR_VPS_IP>:${PORT}"
+echo "App is accessible on the port configured by PORT in .env (default 8080)."
+echo "For HTTPS, place a reverse proxy in front and set COOKIE_SECURE=true."

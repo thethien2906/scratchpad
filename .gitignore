@@ -6,6 +6,11 @@ dist-windows
 # Rust / Tauri target directory
 src-tauri/target
 src-tauri/gen
+server/target
+
+# Local runtime data and secrets
+/data
+.env
 
 # OS and IDE files
 .DS_Store

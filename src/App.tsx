@@ -1,13 +1,22 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { ActiveView } from './types';
-import { api } from './services/api';
+import { MutableRefObject, useState, useEffect, useCallback, useRef } from 'react';
+import { ActiveView, ProfileSummary } from './types';
+import { api, isTauri, setUnauthorizedHandler } from './services/api';
 import { useProjects } from './hooks/useProjects';
 import { useAutoSave } from './hooks/useAutoSave';
 import { Sidebar } from './components/Sidebar';
 import { Editor } from './components/Editor';
-import { ScheduleView } from './components/ScheduleView';
+import { ScheduleView, ScheduleViewHandle } from './components/ScheduleView';
+import { DevConsole } from './components/DevConsole';
+import { CreateProfileView } from './components/CreateProfileView';
+import { ProfileGate } from './components/ProfileGate';
 
-export default function App() {
+interface WorkspaceProps {
+  currentProfile?: ProfileSummary | null;
+  onSwitchProfile?: () => Promise<void>;
+  flushRef?: MutableRefObject<(() => Promise<void>) | null>;
+}
+
+function Workspace({ currentProfile, onSwitchProfile, flushRef }: WorkspaceProps) {
   const {
     projects,
     loading: loadingProjects,
@@ -24,6 +33,7 @@ export default function App() {
   });
   const [content, setContent] = useState<string>('');
   const [isLoadingContent, setIsLoadingContent] = useState<boolean>(true);
+  const scheduleRef = useRef<ScheduleViewHandle>(null);
 
   // Reference to current active view for async handlers
   const activeViewRef = useRef<ActiveView>(activeView);
@@ -115,15 +125,32 @@ export default function App() {
     await updateProjectName(id, name);
   };
 
+  const flushAll = useCallback(async () => {
+    await flush();
+    await scheduleRef.current?.flush();
+  }, [flush]);
+
+  useEffect(() => {
+    if (!flushRef) return;
+    flushRef.current = flushAll;
+    return () => {
+      if (flushRef.current === flushAll) flushRef.current = null;
+    };
+  }, [flushRef, flushAll]);
+
+  const handleSwitchProfile = async () => {
+    await flushAll();
+    await onSwitchProfile?.();
+  };
+
   // Find active project details
   const activeProject =
     activeView.type === 'project'
-      ? projects.find((p) => p.id === activeView.projectId)
+      ? projects.find((project) => project.id === activeView.projectId)
       : null;
 
   return (
     <div className="flex h-screen w-screen bg-dark-base text-text-primary antialiased font-sans overflow-hidden">
-      {/* Minimalist Dark Sidebar */}
       <Sidebar
         activeView={activeView}
         projects={projects}
@@ -134,15 +161,16 @@ export default function App() {
         onCreateProject={handleCreateProject}
         onRenameProject={handleRenameProject}
         onDeleteProject={handleDeleteProject}
+        currentProfile={currentProfile}
+        onSwitchProfile={handleSwitchProfile}
       />
 
-      {/* Main View */}
       {isLoadingContent ? (
         <div className="flex-1 flex items-center justify-center text-text-faint text-sm">
           Loading...
         </div>
       ) : activeView.type === 'schedule' ? (
-        <ScheduleView />
+        <ScheduleView ref={scheduleRef} />
       ) : activeView.type === 'general' ? (
         <Editor
           title="Creative Mode"
@@ -167,4 +195,115 @@ export default function App() {
       )}
     </div>
   );
+}
+
+type AuthState = 'checking' | 'locked' | 'authenticated';
+
+function WebApp() {
+  const [authState, setAuthState] = useState<AuthState>('checking');
+  const [currentProfile, setCurrentProfile] = useState<ProfileSummary | null>(null);
+  const [showCreateProfile, setShowCreateProfile] = useState(false);
+  const [profilesRefreshKey, setProfilesRefreshKey] = useState(0);
+  const workspaceFlushRef = useRef<(() => Promise<void>) | null>(null);
+
+  const handleUnauthorized = useCallback(() => {
+    setCurrentProfile(null);
+    setAuthState('locked');
+  }, []);
+
+  useEffect(() => {
+    const unregister = setUnauthorizedHandler(handleUnauthorized);
+    let active = true;
+    api.getCurrentProfile()
+      .then((profile) => {
+        if (!active) return;
+        setCurrentProfile(profile);
+        setAuthState(profile ? 'authenticated' : 'locked');
+      })
+      .catch((error) => {
+        console.error('Failed to restore profile session:', error);
+        if (active) {
+          setCurrentProfile(null);
+          setAuthState('locked');
+        }
+      });
+
+    return () => {
+      active = false;
+      unregister();
+    };
+  }, [handleUnauthorized]);
+
+  const handleUnlocked = useCallback((profile: ProfileSummary) => {
+    setCurrentProfile(profile);
+    setAuthState('authenticated');
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await workspaceFlushRef.current?.();
+      await api.logoutProfile();
+    } finally {
+      setCurrentProfile(null);
+      setAuthState('locked');
+    }
+  }, []);
+
+  const handleOpenCreateProfile = useCallback(async () => {
+    try {
+      await workspaceFlushRef.current?.();
+    } catch (error) {
+      console.error('Failed to flush workspace before opening profile creation:', error);
+    }
+    setShowCreateProfile(true);
+  }, []);
+
+  const handleProfileCreated = useCallback(async () => {
+    try {
+      await api.logoutProfile();
+    } catch (error) {
+      console.error('Unable to clear the previous session:', error);
+    }
+    setCurrentProfile(null);
+    setAuthState('locked');
+    setShowCreateProfile(false);
+    setProfilesRefreshKey((key) => key + 1);
+  }, []);
+
+  return (
+    <>
+      <DevConsole
+        onOpenCreateProfile={() => { void handleOpenCreateProfile(); }}
+        onLock={handleLogout}
+        hasUnlockedProfile={authState === 'authenticated' && currentProfile !== null}
+      />
+
+      {showCreateProfile ? (
+        <CreateProfileView
+          onBack={() => setShowCreateProfile(false)}
+          onProfileCreated={() => { void handleProfileCreated(); }}
+        />
+      ) : authState === 'checking' ? (
+        <main className="fixed inset-0 flex items-center justify-center bg-dark-base text-sm text-text-muted">
+          Loading…
+        </main>
+      ) : authState === 'locked' ? (
+        <ProfileGate refreshKey={profilesRefreshKey} onUnlocked={handleUnlocked} />
+      ) : currentProfile ? (
+        <Workspace
+          key={currentProfile.id}
+          currentProfile={currentProfile}
+          onSwitchProfile={handleLogout}
+          flushRef={workspaceFlushRef}
+        />
+      ) : (
+        <ProfileGate refreshKey={profilesRefreshKey} onUnlocked={handleUnlocked} />
+      )}
+    </>
+  );
+}
+
+export default function App() {
+  if (isTauri) return <Workspace />;
+  return <WebApp />;
 }
